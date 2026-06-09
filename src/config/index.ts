@@ -1,11 +1,12 @@
 import dotenv from "dotenv";
-import { env } from "process";
+import path from "node:path";
 
-dotenv.config({ quiet: true });
+dotenv.config({
+  path: path.resolve(process.cwd(), ".env"),
+});
 
-const config = {
-  port: env.PORT,
-  database_url: env.DATABASE_URL,
+export const sysConfig = {
+  envPort: process.env.PORT || 5000,
+  dbUri: process.env.CONNECTION_STRING,
+  jwtSignSecret: process.env.ACCESS_SECRET || "default_vessel_secret_2026",
 };
-
-export default config;
