@@ -33,9 +33,9 @@ export const bootDatabase = async (): Promise<void> => {
         updated_at TIMESTAMP DEFAULT NOW()
       );
     `);
-    console.log("Database synchronized successfully.");
+    console.log("⚡ Database synchronized successfully.");
   } catch (error) {
-    console.error("Database Connection Error:", error);
+    console.error("❌ Database Connection Error:", error);
     process.exit(1);
   }
 };

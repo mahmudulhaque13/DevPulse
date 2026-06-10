@@ -64,7 +64,6 @@ const getSingleIssueFromDB = async (id: string) => {
 
   const issue = issueResult.rows[0];
 
-  // NO SQL JOIN: Fetch reporter profile separately
   const userResult = await pool.query(
     "SELECT id, name, role FROM users WHERE id = $1",
     [issue.reporter_id],

@@ -3,21 +3,12 @@ import express, {
   type Request,
   type Response,
 } from "express";
-import cors from "cors";
 import { authRouter } from "./modules/auth/auth.route";
 import { issueRouter } from "./modules/issues/issue.route";
 import { userRouter } from "./modules/users/user.route";
 import globalErrorHandler from "./middleware/globalErrorHandler";
 
 const app: Application = express();
-
-app.use(
-  cors({
-    origin: "*",
-    methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  }),
-);
 
 app.use(express.json());
 
