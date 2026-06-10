@@ -2,9 +2,15 @@ import { pool } from "../../database";
 
 const createIssueIntoDB = async (payload: any, reporterId: number) => {
   const { title, description, type } = payload;
+
+  // input trim validation to prevent db query layout gaps
+  const cleanTitle = title?.trim();
+  const cleanDescription = description?.trim();
+  const cleanType = type?.trim();
+
   const result = await pool.query(
     `INSERT INTO issues (title, description, type, reporter_id) VALUES ($1, $2, $3, $4) RETURNING *`,
-    [title, description, type, reporterId],
+    [cleanTitle, cleanDescription, cleanType, reporterId],
   );
   return result.rows[0];
 };
@@ -30,8 +36,8 @@ const getAllIssuesFromDB = async (filters: any) => {
 
   if (issues.length === 0) return [];
 
+  // >>> NO SQL JOIN SOLUTION (IN-MEMORY HYDRATION) <<<
   const userIds = Array.from(new Set(issues.map((i) => i.reporter_id)));
-
   const usersResult = await pool.query(
     `SELECT id, name, role FROM users WHERE id = ANY($1)`,
     [userIds],
@@ -48,20 +54,59 @@ const getAllIssuesFromDB = async (filters: any) => {
   }));
 };
 
+const getSingleIssueFromDB = async (id: string) => {
+  const issueResult = await pool.query("SELECT * FROM issues WHERE id = $1", [
+    id,
+  ]);
+  if (issueResult.rows.length === 0) {
+    const error: any = new Error("Issue not found!");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const issue = issueResult.rows[0];
+
+  // NO SQL JOIN: Fetch reporter profile separately
+  const userResult = await pool.query(
+    "SELECT id, name, role FROM users WHERE id = $1",
+    [issue.reporter_id],
+  );
+
+  const { reporter_id, ...issueData } = issue;
+  return {
+    ...issueData,
+    reporter: userResult.rows[0] || null,
+  };
+};
+
 const updateIssueInDB = async (id: string, payload: any, currentUser: any) => {
   const targetIssue = await pool.query("SELECT * FROM issues WHERE id = $1", [
     id,
   ]);
-  if (targetIssue.rows.length === 0) throw new Error("Issue not found!");
+  if (targetIssue.rows.length === 0) {
+    const error: any = new Error("Issue not found!");
+    error.statusCode = 404;
+    throw error;
+  }
 
   const issue = targetIssue.rows[0];
 
   if (currentUser.role !== "maintainer") {
-    if (issue.reporter_id !== currentUser.id)
-      throw new Error("Unauthorized access.");
-    if (issue.status !== "open") throw new Error("Cannot edit non-open issue.");
-    if (payload.status && payload.status !== issue.status)
-      throw new Error("Contributors cannot change status.");
+    if (issue.reporter_id !== currentUser.id) {
+      const error: any = new Error("Unauthorized access.");
+      error.statusCode = 403;
+      throw error;
+    }
+    if (issue.status !== "open") {
+      const error: any = new Error("Cannot edit non-open issue.");
+      error.statusCode = 400;
+      throw error;
+    }
+    if (payload.status && payload.status !== issue.status) {
+      const error: any = new Error("Contributors cannot change status.");
+      error.statusCode = 400;
+      throw error;
+    }
   }
 
   const result = await pool.query(
@@ -73,8 +118,36 @@ const updateIssueInDB = async (id: string, payload: any, currentUser: any) => {
   return result.rows[0];
 };
 
+const deleteIssueFromDB = async (id: string, currentUser: any) => {
+  const targetIssue = await pool.query("SELECT * FROM issues WHERE id = $1", [
+    id,
+  ]);
+  if (targetIssue.rows.length === 0) {
+    const error: any = new Error("Issue not found!");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const issue = targetIssue.rows[0];
+
+  // RBAC validation for deletion
+  if (
+    currentUser.role !== "maintainer" &&
+    issue.reporter_id !== currentUser.id
+  ) {
+    const error: any = new Error("Unauthorized access to delete this issue.");
+    error.statusCode = 403;
+    throw error;
+  }
+
+  await pool.query("DELETE FROM issues WHERE id = $1", [id]);
+  return { id };
+};
+
 export const issueService = {
   createIssueIntoDB,
   getAllIssuesFromDB,
+  getSingleIssueFromDB,
   updateIssueInDB,
+  deleteIssueFromDB,
 };
