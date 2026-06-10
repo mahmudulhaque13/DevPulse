@@ -1,10 +1,12 @@
 import app from "./app";
-import config from "./config";
+import { bootDatabase } from "./database";
+import { sysConfig } from "./config";
 
-const main = async () => {
-  app.listen(config.port, () => {
-    console.log(`server is running on port ${config.port}`);
+const initializeSystemCore = async (): Promise<void> => {
+  await bootDatabase();
+  app.listen(sysConfig.envPort, () => {
+    console.log(`Server active on port: ${sysConfig.envPort}`);
   });
 };
 
-main();
+initializeSystemCore();
