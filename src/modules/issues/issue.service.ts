@@ -3,7 +3,6 @@ import { pool } from "../../database";
 const createIssueIntoDB = async (payload: any, reporterId: number) => {
   const { title, description, type } = payload;
 
-  // input trim validation to prevent db query layout gaps
   const cleanTitle = title?.trim();
   const cleanDescription = description?.trim();
   const cleanType = type?.trim();
@@ -36,7 +35,6 @@ const getAllIssuesFromDB = async (filters: any) => {
 
   if (issues.length === 0) return [];
 
-  // >>> NO SQL JOIN SOLUTION (IN-MEMORY HYDRATION) <<<
   const userIds = Array.from(new Set(issues.map((i) => i.reporter_id)));
   const usersResult = await pool.query(
     `SELECT id, name, role FROM users WHERE id = ANY($1)`,
@@ -130,7 +128,6 @@ const deleteIssueFromDB = async (id: string, currentUser: any) => {
 
   const issue = targetIssue.rows[0];
 
-  // RBAC validation for deletion
   if (
     currentUser.role !== "maintainer" &&
     issue.reporter_id !== currentUser.id
