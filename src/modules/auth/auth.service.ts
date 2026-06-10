@@ -6,7 +6,6 @@ import { sysConfig } from "../../config";
 const signupIntoDB = async (payload: any) => {
   const { name, email, password, role } = payload;
 
-  // Application layer check for pre-existing email records
   const userExist = await pool.query("SELECT id FROM users WHERE email = $1", [
     email,
   ]);

@@ -5,7 +5,7 @@ import { sysConfig } from "./config";
 const initializeSystemCore = async (): Promise<void> => {
   await bootDatabase();
   app.listen(sysConfig.envPort, () => {
-    console.log(`🚀 Server active on port: ${sysConfig.envPort}`);
+    console.log(`Server active on port: ${sysConfig.envPort}`);
   });
 };
 
