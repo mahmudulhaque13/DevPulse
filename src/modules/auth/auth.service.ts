@@ -5,6 +5,17 @@ import { sysConfig } from "../../config";
 
 const signupIntoDB = async (payload: any) => {
   const { name, email, password, role } = payload;
+
+  // Application layer check for pre-existing email records
+  const userExist = await pool.query("SELECT id FROM users WHERE email = $1", [
+    email,
+  ]);
+  if (userExist.rows.length > 0) {
+    const error: any = new Error("Email is already registered!");
+    error.statusCode = 400;
+    throw error;
+  }
+
   const securePassword = await bcrypt.hash(password, 10);
   const defaultRole = role || "contributor";
 
@@ -22,11 +33,19 @@ const loginUser = async (payload: any) => {
     email,
   ]);
 
-  if (userExist.rows.length === 0) throw new Error("Invalid credentials.");
+  if (userExist.rows.length === 0) {
+    const error: any = new Error("Invalid credentials.");
+    error.statusCode = 401;
+    throw error;
+  }
 
   const user = userExist.rows[0];
   const isMatch = await bcrypt.compare(password, user.password);
-  if (!isMatch) throw new Error("Invalid credentials.");
+  if (!isMatch) {
+    const error: any = new Error("Invalid credentials.");
+    error.statusCode = 401;
+    throw error;
+  }
 
   const token = jwt.sign(
     { id: user.id, name: user.name, role: user.role },
